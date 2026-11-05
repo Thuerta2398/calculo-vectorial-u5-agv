@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Consola de Ingeniería AGV</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: consola de planta — barra de mando lateral (código, ficha, capas) + visor principal con pestañas */
+:root{
+  --bg:#eef1f6; --panel:#ffffff; --ink:#14213a; --muted:#56627a; --line:#d4dae5;
+  --brand:#1b396a; --brand-soft:#e3eaf6; --accent:#e5671f; --ok:#1d7f47; --ok-soft:#e2f3e9; --bad:#b8352a; --bad-soft:#fbe7e4;
+  --f-display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1420; --panel:#151f31; --ink:#e5eaf3; --muted:#9aa6bb; --line:#2a3852;
+  --brand:#8fb0ea; --brand-soft:#1d2b45; --accent:#ff9450; --ok:#4cc27f; --ok-soft:#163626; --bad:#ff7466; --bad-soft:#3a1d1b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1420; --panel:#151f31; --ink:#e5eaf3; --muted:#9aa6bb; --line:#2a3852;
+  --brand:#8fb0ea; --brand-soft:#1d2b45; --accent:#ff9450; --ok:#4cc27f; --ok-soft:#163626; --bad:#ff7466; --bad-soft:#3a1d1b; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 40px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 24px;border-bottom:2px solid var(--brand);padding-bottom:10px}
+header.top h1{font-family:var(--f-display);font-weight:700;font-size:clamp(1.7rem,3.4vw,2.4rem);letter-spacing:.02em;margin:0;line-height:1;text-wrap:balance;color:var(--brand)}
+header.top h1 span{color:var(--accent)}
+.meta{font-family:var(--f-mono);font-size:.78rem;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:330px minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;min-width:0}
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+h2{font-family:var(--f-display);font-weight:600;font-size:1.1rem;letter-spacing:.08em;text-transform:uppercase;margin:0 0 10px;color:var(--brand)}
+label{font-size:.85rem;color:var(--muted)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input[type=text]{font-family:var(--f-mono);font-size:1rem;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);min-width:0;flex:1}
+input[type=text]:focus-visible,button:focus-visible,input[type=range]:focus-visible,input[type=checkbox]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{font-family:var(--f-body);font-weight:600;font-size:.9rem;border:1px solid var(--brand);background:var(--brand);color:var(--panel);padding:8px 14px;border-radius:6px;cursor:pointer}
+button.ghost{background:transparent;color:var(--brand)}
+button:hover{filter:brightness(1.08)}
+.status{font-size:.85rem;margin-top:8px}
+.badge{display:inline-block;font-family:var(--f-mono);font-size:.75rem;padding:2px 8px;border-radius:99px;background:var(--brand-soft);color:var(--brand);letter-spacing:.04em}
+.badge.demo{background:var(--bad-soft);color:var(--bad)}
+dl.ficha{margin:0;display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+dl.ficha div{border-top:1px dashed var(--line);padding-top:6px}
+dl.ficha dt{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+dl.ficha dd{margin:0;font-family:var(--f-mono);font-size:.86rem;overflow-wrap:anywhere}
+.layers{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
+.layers label{display:flex;gap:6px;align-items:center;color:var(--ink);font-size:.86rem;cursor:pointer}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:12px}
+.tabs button{background:transparent;color:var(--muted);border:none;border-bottom:3px solid transparent;border-radius:0;padding:8px 12px}
+.tabs button[aria-selected=true]{color:var(--brand);border-bottom-color:var(--accent)}
+.viz{position:relative;width:100%}
+canvas{display:block;width:100%;border-radius:6px}
+#plan{aspect-ratio:56/36;background:var(--bg)}
+#perfil{aspect-ratio:16/7;background:var(--bg)}
+#plot3d{width:100%;aspect-ratio:16/10;min-height:300px}
+.ctrl{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.ctrl input[type=range]{flex:1;min-width:160px;accent-color:var(--accent)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:10px}
+.readout div{background:var(--bg);border-radius:6px;padding:6px 10px}
+.readout span{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.readout b{font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums}
+.legend{display:flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:.75rem;color:var(--muted);margin-top:8px;flex-wrap:wrap}
+.legend .bar{height:10px;flex:1;min-width:120px;max-width:260px;border-radius:3px;background:linear-gradient(90deg,#2d5aa0,#9cc3e6,#f5efc2,#f2a24f,#c0392b)}
+.key{display:inline-flex;align-items:center;gap:4px}
+.key i{width:18px;height:3px;display:inline-block;border-radius:2px}
+.note{font-size:.84rem;color:var(--muted)}
+.roles{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.role{border:1px solid var(--line);border-radius:8px;padding:12px;min-width:0}
+.role h3{margin:0 0 2px;font-family:var(--f-display);font-size:1.05rem;letter-spacing:.06em;text-transform:uppercase}
+.role .tema{font-size:.78rem;color:var(--muted);margin-bottom:8px}
+.field{display:flex;flex-direction:column;gap:4px;padding:8px 0;border-top:1px dashed var(--line)}
+.field .q{font-size:.88rem}
+.field .unit{font-family:var(--f-mono);font-size:.75rem;color:var(--muted)}
+.chip{font-size:.8rem;font-weight:600;padding:2px 8px;border-radius:99px;display:inline-block}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.bad{background:var(--bad-soft);color:var(--bad)}
+.hint{font-size:.8rem;color:var(--muted);background:var(--bg);border-left:3px solid var(--accent);padding:4px 8px;border-radius:0 4px 4px 0}
+.formato{font-size:.84rem;background:var(--brand-soft);color:var(--ink);border-radius:6px;padding:8px 12px;margin-bottom:12px}
+.formato code{font-family:var(--f-mono)}
+.folio{margin-top:14px;border:2px dashed var(--line);border-radius:8px;padding:12px 14px}
+.folio.done{border-color:var(--ok);background:var(--ok-soft)}
+.folio .num{font-family:var(--f-mono);font-size:1.25rem;letter-spacing:.08em;color:var(--ok)}
+.progress{height:6px;background:var(--bg);border-radius:99px;overflow:hidden;margin-top:6px}
+.progress i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+footer{font-size:.82rem;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+sub,sup{font-size:.72em}
+@media (prefers-reduced-motion: reduce){.progress i{transition:none}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Consola de Ingeniería <span>AGV</span></h1>
+    <div class="meta">Cálculo Vectorial · Unidad 5 · TecNM Campus Ensenada</div>
+  </header>
+
+  <div class="grid">
+    <aside class="side">
+      <section class="panel" aria-labelledby="h-acc">
+        <h2 id="h-acc">Código de equipo</h2>
+        <form id="f-code" class="row" autocomplete="off">
+          <input type="text" id="code" placeholder="AGV-XXXX" aria-label="Código de equipo" maxlength="9">
+          <button type="submit">Cargar planta</button>
+        </form>
+        <div class="status" id="status"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="h-ficha">
+        <h2 id="h-ficha">Ficha técnica</h2>
+        <dl class="ficha" id="ficha"></dl>
+      </section>
+
+      <section class="panel" aria-labelledby="h-cap">
+        <h2 id="h-cap">Capas del plano</h2>
+        <div class="layers">
+          <label><input type="checkbox" id="L-heat" checked> Temperatura</label>
+          <label><input type="checkbox" id="L-route" checked> Ruta</label>
+          <label><input type="checkbox" id="L-zone" checked> Zona de exclusión</label>
+          <label><input type="checkbox" id="L-field"> Campo F</label>
+          <label><input type="checkbox" id="L-store" checked> Almacén</label>
+          <label><input type="checkbox" id="L-vec" checked> Vectores T y N</label>
+        </div>
+      </section>
+    </aside>
+
+    <main class="panel" style="min-width:0">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="t-plan" aria-selected="true" aria-controls="v-plan">Planta 2D</button>
+        <button role="tab" id="t-3d" aria-selected="false" aria-controls="v-3d">Superficie 3D</button>
+        <button role="tab" id="t-perfil" aria-selected="false" aria-controls="v-perfil">Perfil térmico</button>
+        <button role="tab" id="t-ver" aria-selected="false" aria-controls="v-ver">Verificador</button>
+      </div>
+
+      <section id="v-plan" role="tabpanel">
+        <div class="viz"><canvas id="plan" aria-label="Plano de la planta con mapa de temperatura, ruta y campo de ventilación"></canvas></div>
+        <div class="ctrl">
+          <button type="button" id="play" class="ghost">▶ Recorrer</button>
+          <label for="tslider">t</label>
+          <input type="range" id="tslider" min="0" max="12.566" step="0.01" value="3.1416">
+          <button type="button" id="tpi" class="ghost">t = π</button>
+        </div>
+        <div class="readout">
+          <div><span>t (s)</span><b id="r-t">—</b></div>
+          <div><span>Posición (m)</span><b id="r-xy">—</b></div>
+          <div><span>T en el AGV</span><b id="r-T">—</b></div>
+          <div><span>Cursor</span><b id="r-cur">mueve el cursor</b></div>
+        </div>
+        <div class="legend"><span>20 °C</span><span class="bar"></span><span>50 °C</span><span>· ejes en m</span>
+          <span class="key"><i style="background:var(--accent)"></i>T̂ tangente</span>
+          <span class="key"><i style="background:#7a3fd1"></i>N̂ normal</span></div>
+        <p class="note">Los vectores tangente y normal se dibujan unitarios: muestran dirección, no magnitud. El circuito del almacén se recorre en sentido antihorario.</p>
+      </section>
+
+      <section id="v-3d" role="tabpanel" hidden>
+        <div id="plot3d"><p class="note" id="msg3d">Cargando la superficie 3D…</p></div>
+        <p class="note">Arrastra para rotar y usa la rueda para acercar. La línea negra es la ruta del AGV proyectada sobre la superficie T(x, y).</p>
+      </section>
+
+      <section id="v-perfil" role="tabpanel" hidden>
+        <div class="viz"><canvas id="perfil" aria-label="Temperatura de la carga a lo largo del recorrido"></canvas></div>
+        <div class="readout">
+          <div><span>T máxima en ruta</span><b id="p-max">—</b></div>
+          <div><span>Tiempo arriba de 25 °C</span><b id="p-over">—</b></div>
+          <div><span>Instante de T máx.</span><b id="p-tmax">—</b></div>
+        </div>
+        <p class="note">Eje horizontal: tiempo t (s); eje vertical: temperatura de la carga (°C). Úsenlo para el dictamen térmico: compárenlo con la temperatura promedio de la zona de exclusión que calcula el Ingeniero Térmico.</p>
+      </section>
+
+      <section id="v-ver" role="tabpanel" hidden>
+        <div class="formato"><b>Formato de captura:</b> número con <b>punto decimal</b>, sin unidades ni espacios, al menos 2 decimales. Ejemplos válidos: <code>-12.57</code> · <code>0.35</code> · <code>1534.20</code>. No válidos: <code>12,57</code> · <code>12.57 J</code> · <code>4π</code>.</div>
+        <div class="roles" id="roles"></div>
+        <div class="folio" id="folio">
+          <b>Folio de verificación</b>
+          <div class="progress" aria-hidden="true"><i id="prog"></i></div>
+          <p class="note" id="folio-txt">Verifiquen los 7 resultados para obtener el folio. Va en la portada del reporte.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    La consola sirve para explorar y comprobar; no sustituye el desarrollo a mano. El reporte debe mostrar el procedimiento completo y, en el video, cada integrante explica el resultado de un rol distinto al que calculó.
+  </footer>
+</div>
+
+<script>
+const TEAMS = {"AGV-2XGM":{"B":10,"A":18,"s":4.5,"R":4,"x0":11,"y0":9,"a":-0.5,"b":0.003,"c":0.03,"d":1.5,"w":0.5,"h":1.2,"x1":32,"x2":38,"y1":-6,"y2":0},"AGV-F6US":{"B":9,"A":30,"s":2.5,"R":6,"x0":15,"y0":8,"a":-0.2,"b":0.001,"c":0.04,"d":1.0,"w":0.7,"h":1.3,"x1":32,"x2":42,"y1":-6,"y2":-1},"AGV-URMF":{"B":11,"A":25,"s":3,"R":5,"x0":14,"y0":7,"a":-0.5,"b":0.003,"c":0.02,"d":1.2,"w":0.7,"h":0.9,"x1":34,"x2":42,"y1":-6,"y2":-1},"AGV-QGH5":{"B":12,"A":30,"s":2.5,"R":8,"x0":15,"y0":9,"a":-0.2,"b":0.003,"c":0.02,"d":1.2,"w":0.5,"h":0.9,"x1":34,"x2":40,"y1":-6,"y2":-1},"AGV-E272":{"B":12,"A":10,"s":3.5,"R":8,"x0":12,"y0":6,"a":-0.3,"b":0.001,"c":0.04,"d":1.0,"w":0.6,"h":1.4,"x1":32,"x2":38,"y1":-6,"y2":-2},"AGV-FDKY":{"B":9,"A":25,"s":4,"R":4,"x0":15,"y0":10,"a":-0.4,"b":0.003,"c":0.03,"d":1.2,"w":0.5,"h":1.3,"x1":34,"x2":44,"y1":-4,"y2":2},"AGV-J3D3":{"B":11,"A":25,"s":3,"R":8,"x0":12,"y0":10,"a":-0.2,"b":0.002,"c":0.04,"d":1.5,"w":0.55,"h":1.4,"x1":32,"x2":42,"y1":-4,"y2":1},"AGV-UTBX":{"B":8,"A":25,"s":3,"R":4,"x0":14,"y0":8,"a":-0.5,"b":0.0025,"c":0.015,"d":0.5,"w":0.65,"h":1.1,"x1":34,"x2":42,"y1":-8,"y2":-4},"AGV-EJAB":{"B":10,"A":20,"s":4,"R":7,"x0":16,"y0":8,"a":0.5,"b":0.0015,"c":0.04,"d":0.5,"w":0.65,"h":1.2,"x1":32,"x2":38,"y1":-6,"y2":-1},"AGV-CY7A":{"B":10,"A":12,"s":3.5,"R":5,"x0":16,"y0":8,"a":0.5,"b":0.002,"c":0.04,"d":0.8,"w":0.7,"h":1.0,"x1":30,"x2":36,"y1":-6,"y2":-1},"AGV-7M4A":{"B":9,"A":12,"s":2.5,"R":5,"x0":12,"y0":8,"a":0.5,"b":0.0015,"c":0.03,"d":0.8,"w":0.5,"h":1.2,"x1":30,"x2":38,"y1":-6,"y2":-1},"AGV-YCTX":{"B":10,"A":12,"s":4,"R":5,"x0":14,"y0":10,"a":-0.4,"b":0.0015,"c":0.03,"d":0.8,"w":0.7,"h":1.4,"x1":30,"x2":40,"y1":-8,"y2":-3},"DEMO":{"B":10,"A":20,"s":4,"R":5,"x0":13,"y0":9,"a":0.3,"b":0.002,"c":0.02,"d":1,"w":0.6,"h":1.2,"x1":32,"x2":40,"y1":-6,"y2":-1}};
+const g = 9.81, TMIN = 20, TMAX = 50;
+const W0 = {xmin:-3, xmax:53, ymin:-14, ymax:22};
+let P = null, code = null, t = Math.PI, playing = false, plotLoaded = false;
+const $ = id => document.getElementById(id);
+const fmt = (v, n = 2) => (Math.abs(v) < 1e-12 ? 0 : v).toFixed(n);
+const sgn = (v, txt, first) => { const s = v < 0 ? "−" : (first ? "" : "+"); return `${first ? s : " " + s + " "}${Math.abs(v)}${txt}`; };
+
+/* ---------- Modelo ---------- */
+const Tf = (x, y) => 20 + P.A * Math.exp(-((x - P.x0) ** 2 + (y - P.y0) ** 2) / P.s ** 2);
+const Fv = (x, y) => [-P.a * y + P.b * x * x, P.c * x * y + P.d];
+const rr = t => [4 * t, P.B * Math.sin(t / 2)];
+const vv = t => [4, P.B / 2 * Math.cos(t / 2)];
+const aa = t => [0, -P.B / 4 * Math.sin(t / 2)];
+function answers(p) {
+  const pi = Math.PI, px = 4 * pi, py = p.B;
+  const Iexc = pi * p.A * p.s ** 2 * (1 - Math.exp(-(p.R ** 2) / p.s ** 2));
+  return {
+    W: -16 * p.a * p.B + 512 * pi ** 3 / 3 * p.b - 2 * pi * p.B ** 2 * p.c,
+    div: px * (2 * p.b + p.c),
+    rot: p.c * py + p.a,
+    aN: p.B / 4,
+    Iexc,
+    Tp: 20 + Iexc / (pi * p.R ** 2),
+    Circ: (p.x2 - p.x1) * (p.a * (p.y2 - p.y1) + p.c * (p.y2 ** 2 - p.y1 ** 2) / 2)
+  };
+}
+function fnv(str) { let h = 0x811c9dc5; for (const ch of str) { h ^= ch.charCodeAt(0); h = Math.imul(h, 0x01000193) >>> 0; } return h; }
+const folioOf = c => c + "-" + fnv(c + "|CV-U5-2026|ITE").toString(36).toUpperCase().padStart(7, "0");
+
+/* ---------- Roles y campos ---------- */
+const ROLES = [
+  {id:"log", name:"Ingeniero de Logística", tema:"5.8 Integral de línea", fields:[
+    {k:"W", q:"Trabajo del campo F sobre el AGV en el tramo t ∈ [0, 2π]: W = ∫ F·dr", u:"J",
+     h:["Parametriza: x = 4t, y = B·sen(t/2); dx = 4 dt, dy = (B/2)·cos(t/2) dt.","El término con x·y·dy se reduce a ∫ t·sen t dt: intégralo por partes. Revisa también qué término se anula."]}]},
+  {id:"din", name:"Ingeniero de Dinámica", tema:"5.7 y 5.9 Campos vectoriales, divergencia y rotacional", fields:[
+    {k:"div", q:"Divergencia de F en P = r(π)", u:"1/s (adim. del modelo)", h:["div F = ∂P/∂x + ∂Q/∂y, donde F = ⟨P, Q⟩.","El punto P es la posición del AGV en t = π: (4π, B)."]},
+    {k:"rot", q:"Componente k del rotacional de F en P", u:"1/s (adim. del modelo)", h:["(rot F)·k = ∂Q/∂x − ∂P/∂y.","Evalúa en (4π, B). El signo indica el sentido del giro del aire."]},
+    {k:"aN", q:"Aceleración normal del AGV en t = π", u:"m/s²", h:["a_N = |x′y″ − y′x″| / ‖r′(t)‖  (equivale a κ‖v‖²).","En t = π, cos(π/2) = 0: la velocidad es horizontal y vale 4 m/s."]}]},
+  {id:"ter", name:"Ingeniero Térmico", tema:"5.4 Integral doble en coordenadas polares", fields:[
+    {k:"Iexc", q:"Exceso térmico en la zona de exclusión: ∬ (T − 20) dA sobre el disco de radio R centrado en el horno", u:"°C·m²", h:["Usa polares centradas en el horno: T − 20 = A·e^(−r²/σ²) y dA = r dr dθ.","Sustitución u = r²/σ². La integral en θ solo aporta un factor 2π."]},
+    {k:"Tp", q:"Temperatura promedio en la zona de exclusión", u:"°C", h:["T̄ = (1/Área) ∬ T dA = 20 + (1/πR²) ∬ (T − 20) dA.","Usa tu resultado anterior; no vuelvas a integrar."]}]},
+  {id:"cal", name:"Gerente de Calidad", tema:"5.10 Teorema de Green", fields:[
+    {k:"Circ", q:"Circulación de F en el contorno del almacén (antihorario): ∮ F·dr", u:"J", h:["Teorema de Green: ∮ F·dr = ∬ (∂Q/∂x − ∂P/∂y) dA sobre el rectángulo.","Compruébalo recorriendo los cuatro lados; ambos métodos deben coincidir."]}]}
+];
+const ALLK = ROLES.flatMap(r => r.fields.map(f => f.k));
+let state = {};
+const store = {
+  get(c){ try { return JSON.parse(localStorage.getItem("agvU5:" + c)) || {}; } catch(e){ return {}; } },
+  set(c, v){ try { localStorage.setItem("agvU5:" + c, JSON.stringify(v)); } catch(e){} }
+};
+
+function buildRoles() {
+  const box = $("roles"); box.innerHTML = "";
+  for (const r of ROLES) {
+    const d = document.createElement("div"); d.className = "role";
+    d.innerHTML = `<h3>${r.name}</h3><div class="tema">${r.tema}</div>`;
+    for (const f of r.fields) {
+      const st = state[f.k] || {n:0, ok:false};
+      const w = document.createElement("div"); w.className = "field";
+      w.innerHTML = `<div class="q">${f.q} <span class="unit">[${f.u}]</span></div>
+        <form class="row" data-k="${f.k}"><input type="text" id="in-${f.k}" inputmode="decimal" aria-label="${f.q}" placeholder="0.00">
+        <button type="submit" class="ghost">Verificar</button></form>
+        <div class="row" id="res-${f.k}"></div><div id="hint-${f.k}"></div>`;
+      d.appendChild(w);
+      setTimeout(() => paint(f.k), 0);
+    }
+    box.appendChild(d);
+  }
+  box.querySelectorAll("form").forEach(fm => fm.addEventListener("submit", e => { e.preventDefault(); check(fm.dataset.k); }));
+}
+function fieldDef(k){ for (const r of ROLES) for (const f of r.fields) if (f.k === k) return f; }
+function paint(k) {
+  const st = state[k] || {n:0, ok:false}, f = fieldDef(k), res = $("res-" + k), hb = $("hint-" + k);
+  if (!res) return;
+  res.innerHTML = st.ok ? `<span class="chip ok">✔ Correcto</span><span class="note">Intentos: ${st.n}</span>`
+    : st.n ? `<span class="chip bad">✖ Revisa</span><span class="note">Intentos: ${st.n}</span>` : "";
+  if (st.msg && !st.ok) res.innerHTML += `<span class="note">${st.msg}</span>`;
+  const lvl = st.ok ? 0 : st.n >= 4 ? 2 : st.n >= 2 ? 1 : 0;
+  hb.innerHTML = f.h.slice(0, lvl).map((h, i) => `<div class="hint">Pista ${i + 1}: ${h}</div>`).join("");
+  const done = ALLK.filter(x => (state[x] || {}).ok).length;
+  $("prog").style.width = (100 * done / ALLK.length) + "%";
+  const fo = $("folio");
+  if (done === ALLK.length && code !== "DEMO") { fo.classList.add("done");
+    $("folio-txt").innerHTML = `<span class="num">${folioOf(code)}</span><br><span class="note">Copien este folio en la portada del reporte técnico.</span>`; }
+  else if (done === ALLK.length) { fo.classList.add("done"); $("folio-txt").textContent = "Práctica completa. Con los datos de ejemplo no se emite folio: carguen su código de equipo."; }
+  else { fo.classList.remove("done"); $("folio-txt").textContent = `Verificados ${done} de ${ALLK.length}. Al completar los 7 resultados aparece el folio para la portada del reporte.`; }
+}
+function check(k) {
+  const raw = $("in-" + k).value.trim(), st = state[k] || (state[k] = {n:0, ok:false});
+  if (st.ok) return;
+  st.msg = "";
+  if (raw.includes(",")) { st.msg = "Usa punto decimal: 12.57, no 12,57. Este intento no cuenta."; paint(k); return; }
+  if (!/^[-+]?\d+(\.\d+)?$/.test(raw.replace("−","-"))) { st.msg = "Escribe solo el número, sin unidades ni símbolos. Este intento no cuenta."; paint(k); return; }
+  const v = parseFloat(raw.replace("−","-")), ref = answers(P)[k];
+  const tol = Math.max(0.01 * Math.abs(ref), 0.005);
+  st.n++; st.ok = Math.abs(v - ref) <= tol;
+  store.set(code, state); paint(k);
+}
+
+/* ---------- Carga de equipo ---------- */
+function loadTeam(c) {
+  c = c.trim().toUpperCase().replace(/\s+/g, "");
+  if (!TEAMS[c]) { $("status").innerHTML = `<span class="chip bad">Código no encontrado</span> Revisa que tenga la forma AGV-XXXX, como te lo dio el docente.`; return; }
+  code = c; P = TEAMS[c]; state = store.get(c);
+  $("status").innerHTML = c === "DEMO" ? `<span class="badge demo">DATOS DE EJEMPLO</span> Capturen su código para trabajar con su planta.` : `<span class="badge">${c}</span> Planta cargada.`;
+  const Pp = `${sgn(-P.a, "y", true)} + ${P.b}x²`, Qp = `${P.c}xy + ${P.d}`;
+  $("ficha").innerHTML = [
+    ["Ruta del AGV", `r(t) = ⟨4t, ${P.B} sen(t/2)⟩,  t ∈ [0, 4π] s`],
+    ["Temperatura (°C)", `T = 20 + ${P.A}·e^(−[(x−${P.x0})² + (y−${P.y0})²]/${P.s}²)`],
+    ["Horno y zona de exclusión", `centro (${P.x0}, ${P.y0}) m · radio R = ${P.R} m`],
+    ["Ventilación (N)", `F = ⟨${Pp}, ${Qp}⟩`],
+    ["Tramo para el trabajo", `t ∈ [0, 2π]`],
+    ["Almacén (contorno)", `[${P.x1}, ${P.x2}] × [${P.y1}, ${P.y2}] m`],
+    ["Estabilidad del AGV", `vía w = ${P.w} m · altura CG h = ${P.h} m · a_lím = g·w/(2h), g = 9.81 m/s²`]
+  ].map(([a, b]) => `<div><dt>${a}</dt><dd>${b}</dd></div>`).join("");
+  buildRoles(); heatCache = null; drawAll();
+  if (plotLoaded) draw3d();
+}
+
+/* ---------- Plano 2D ---------- */
+const plan = $("plan"), pctx = plan.getContext("2d");
+let heatCache = null, PX = {};
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const stops = [[0,[45,90,160]],[.25,[156,195,230]],[.5,[245,239,194]],[.75,[242,162,79]],[1,[192,57,43]]];
+function cmap(T) {
+  const u = Math.min(1, Math.max(0, (T - TMIN) / (TMAX - TMIN)));
+  for (let i = 1; i < stops.length; i++) if (u <= stops[i][0]) {
+    const [u0, c0] = stops[i - 1], [u1, c1] = stops[i], s = (u - u0) / (u1 - u0);
+    return c0.map((c, j) => Math.round(c + (c1[j] - c) * s));
+  }
+  return stops[4][1];
+}
+function sizeCanvas(cv) {
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+  const c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0); return [r.width, r.height];
+}
+function drawPlan() {
+  if (!P) return;
+  if (plan.closest("[hidden]")) return;
+  const [w, h] = sizeCanvas(plan), m = {l:34, r:8, t:8, b:24};
+  if (w < 80) return;
+  const sx = (w - m.l - m.r) / (W0.xmax - W0.xmin), sy = (h - m.t - m.b) / (W0.ymax - W0.ymin);
+  const X = x => m.l + (x - W0.xmin) * sx, Y = y => m.t + (W0.ymax - y) * sy;
+  PX = {X, Y, sx, sy, m, w, h};
+  const c = pctx, ink = css("--ink"), muted = css("--muted"), line = css("--line");
+  c.clearRect(0, 0, w, h);
+  if ($("L-heat").checked) {
+    if (!heatCache) {
+      const nx = 168, ny = 108, off = document.createElement("canvas"); off.width = nx; off.height = ny;
+      const oc = off.getContext("2d"), img = oc.createImageData(nx, ny);
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+        const x = W0.xmin + (i + .5) / nx * (W0.xmax - W0.xmin), y = W0.ymax - (j + .5) / ny * (W0.ymax - W0.ymin);
+        const [r, gg, b] = cmap(Tf(x, y)), k = 4 * (j * nx + i);
+        img.data[k] = r; img.data[k + 1] = gg; img.data[k + 2] = b; img.data[k + 3] = 255;
+      }
+      oc.putImageData(img, 0, 0); heatCache = off;
+    }
+    c.imageSmoothingEnabled = true; c.drawImage(heatCache, m.l, m.t, w - m.l - m.r, h - m.t - m.b);
+  }
+  // grid
+  c.strokeStyle = $("L-heat").checked ? "rgba(20,33,58,.18)" : line; c.lineWidth = 1;
+  c.fillStyle = muted; c.font = "11px " + css("--f-mono"); c.textAlign = "center";
+  for (let x = 0; x <= 50; x += 10) { c.beginPath(); c.moveTo(X(x), Y(W0.ymin)); c.lineTo(X(x), Y(W0.ymax)); c.stroke(); c.fillText(x, X(x), h - 8); }
+  c.textAlign = "right";
+  for (let y = -10; y <= 20; y += 10) { c.beginPath(); c.moveTo(X(W0.xmin), Y(y)); c.lineTo(X(W0.xmax), Y(y)); c.stroke(); c.fillText(y, m.l - 5, Y(y) + 4); }
+  const dark = "#14213a";
+  if ($("L-field").checked) {
+    let mx = 0; const pts = [];
+    for (let x = 0; x <= 52; x += 4) for (let y = -12; y <= 20; y += 4) { const f = Fv(x, y); mx = Math.max(mx, Math.hypot(...f)); pts.push([x, y, f]); }
+    const fc = $("L-heat").checked ? "#ffffff" : css("--ink"); c.strokeStyle = fc; c.fillStyle = fc; c.globalAlpha = .8; c.lineWidth = 1.3;
+    for (const [x, y, f] of pts) { const L = Math.hypot(...f); if (L < 1e-9) continue; const s = 1.2 + 1.6 * L / mx; arrow(c, X(x), Y(y), X(x + f[0] / L * s), Y(y + f[1] / L * s), 5); }
+    c.globalAlpha = 1;
+  }
+  if ($("L-zone").checked) {
+    c.setLineDash([6, 4]); c.strokeStyle = dark; c.lineWidth = 2;
+    c.beginPath(); c.ellipse(X(P.x0), Y(P.y0), P.R * sx, P.R * sy, 0, 0, 2 * Math.PI); c.stroke(); c.setLineDash([]);
+    c.fillStyle = dark; c.beginPath(); c.arc(X(P.x0), Y(P.y0), 4, 0, 2 * Math.PI); c.fill();
+    label(c, "Horno", X(P.x0) + 6, Y(P.y0) - 6);
+  }
+  if ($("L-store").checked) {
+    const x1 = X(P.x1), x2 = X(P.x2), y1 = Y(P.y1), y2 = Y(P.y2);
+    c.strokeStyle = dark; c.lineWidth = 2; c.setLineDash([3, 3]); c.strokeRect(x1, y2, x2 - x1, y1 - y2); c.setLineDash([]);
+    c.fillStyle = dark; arrow(c, (x1 + x2) / 2 - 8, y1, (x1 + x2) / 2 + 8, y1, 6); arrow(c, x2, (y1 + y2) / 2 + 8, x2, (y1 + y2) / 2 - 8, 6);
+    arrow(c, (x1 + x2) / 2 + 8, y2, (x1 + x2) / 2 - 8, y2, 6); arrow(c, x1, (y1 + y2) / 2 - 8, x1, (y1 + y2) / 2 + 8, 6);
+    label(c, "Almacén", x1 + 4, y2 - 6);
+  }
+  if ($("L-route").checked) {
+    c.lineJoin = "round";
+    for (const [col, lw] of [["#ffffff", 5], [dark, 2.2]]) {
+      c.strokeStyle = col; c.lineWidth = lw; c.beginPath();
+      for (let i = 0; i <= 400; i++) { const tt = 4 * Math.PI * i / 400, [x, y] = rr(tt); i ? c.lineTo(X(x), Y(y)) : c.moveTo(X(x), Y(y)); }
+      c.stroke();
+    }
+    const [px, py] = rr(Math.PI); c.fillStyle = "#ffffff"; c.strokeStyle = dark; c.lineWidth = 2;
+    c.beginPath(); c.arc(X(px), Y(py), 5, 0, 2 * Math.PI); c.fill(); c.stroke(); label(c, "P (t = π)", X(px) + 10, Y(py) + 28);
+  }
+  // AGV
+  const [ax, ay] = rr(t), v = vv(t), sp = Math.hypot(...v), Tu = [v[0] / sp, v[1] / sp];
+  if ($("L-vec").checked) {
+    const a = aa(t), at = a[0] * Tu[0] + a[1] * Tu[1], an = [a[0] - at * Tu[0], a[1] - at * Tu[1]];
+    let Nu = [-Tu[1], Tu[0]]; if (Math.hypot(...an) > 1e-6 && an[0] * Nu[0] + an[1] * Nu[1] < 0) Nu = [-Nu[0], -Nu[1]];
+    const L = 4;
+    c.lineWidth = 3; c.strokeStyle = css("--accent"); c.fillStyle = css("--accent"); arrow(c, X(ax), Y(ay), X(ax + Tu[0] * L), Y(ay + Tu[1] * L), 9);
+    if (Math.hypot(...an) > 1e-6) { c.strokeStyle = "#7a3fd1"; c.fillStyle = "#7a3fd1"; arrow(c, X(ax), Y(ay), X(ax + Nu[0] * L), Y(ay + Nu[1] * L), 9); }
+  }
+  c.save(); c.translate(X(ax), Y(ay)); c.rotate(-Math.atan2(v[1] * sy, v[0] * sx));
+  c.fillStyle = css("--accent"); c.strokeStyle = "#ffffff"; c.lineWidth = 2; roundRect(c, -11, -7, 22, 14, 3); c.fill(); c.stroke();
+  c.fillStyle = "#ffffff"; c.fillRect(4, -4, 4, 8); c.restore();
+  $("r-t").textContent = fmt(t); $("r-xy").textContent = `(${fmt(ax)}, ${fmt(ay)})`;
+  const Tn = Tf(ax, ay); $("r-T").innerHTML = `${fmt(Tn, 1)} °C ${Tn > 25 ? '<span class="chip bad">&gt; 25</span>' : '<span class="chip ok">≤ 25</span>'}`;
+}
+function label(c, s, x, y) { c.font = "600 12px " + css("--f-body"); c.lineWidth = 3; c.strokeStyle = "#ffffff"; c.strokeText(s, x, y); c.fillStyle = "#14213a"; c.fillText(s, x, y); }
+function arrow(c, x0, y0, x1, y1, hs) {
+  const an = Math.atan2(y1 - y0, x1 - x0); c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke();
+  c.beginPath(); c.moveTo(x1, y1); c.lineTo(x1 - hs * Math.cos(an - .45), y1 - hs * Math.sin(an - .45)); c.lineTo(x1 - hs * Math.cos(an + .45), y1 - hs * Math.sin(an + .45)); c.closePath(); c.fill();
+}
+function roundRect(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+plan.addEventListener("pointermove", e => {
+  if (!P || !PX.X) return; const r = plan.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+  const x = W0.xmin + (mx - PX.m.l) / PX.sx, y = W0.ymax - (my - PX.m.t) / PX.sy;
+  if (x < W0.xmin || x > W0.xmax || y < W0.ymin || y > W0.ymax) return;
+  $("r-cur").textContent = `(${fmt(x, 1)}, ${fmt(y, 1)}) · ${fmt(Tf(x, y), 1)} °C`;
+});
+
+/* ---------- Perfil térmico ---------- */
+function drawPerfil() {
+  const cv = $("perfil"); if (!P || cv.closest("[hidden]")) return;
+  const [w, h] = sizeCanvas(cv), c = cv.getContext("2d"), m = {l:44, r:12, t:12, b:30};
+  const N = 800, ts = [], Ts = []; let mx = 0, over = 0, tmx = 0;
+  for (let i = 0; i <= N; i++) { const tt = 4 * Math.PI * i / N, [x, y] = rr(tt), T = Tf(x, y); ts.push(tt); Ts.push(T); if (T > mx) { mx = T; tmx = tt; } if (i && T > 25) over += 4 * Math.PI / N; }
+  const ymax = Math.max(30, Math.ceil(mx / 5) * 5), ymin = 20;
+  const X = tt => m.l + tt / (4 * Math.PI) * (w - m.l - m.r), Y = T => m.t + (ymax - T) / (ymax - ymin) * (h - m.t - m.b);
+  c.clearRect(0, 0, w, h); c.strokeStyle = css("--line"); c.fillStyle = css("--muted"); c.font = "11px " + css("--f-mono"); c.lineWidth = 1;
+  c.textAlign = "right"; for (let T = ymin; T <= ymax; T += 5) { c.beginPath(); c.moveTo(m.l, Y(T)); c.lineTo(w - m.r, Y(T)); c.stroke(); c.fillText(T + "°", m.l - 6, Y(T) + 4); }
+  c.textAlign = "center"; ["0", "π", "2π", "3π", "4π"].forEach((s, i) => c.fillText(s, X(i * Math.PI), h - 10));
+  c.fillStyle = css("--bad-soft"); c.globalAlpha = .9;
+  c.beginPath(); c.moveTo(X(0), Y(25)); for (let i = 0; i <= N; i++) c.lineTo(X(ts[i]), Y(Math.max(25, Ts[i]))); c.lineTo(X(4 * Math.PI), Y(25)); c.closePath(); c.fill(); c.globalAlpha = 1;
+  c.setLineDash([6, 4]); c.strokeStyle = css("--bad"); c.lineWidth = 1.5; c.beginPath(); c.moveTo(m.l, Y(25)); c.lineTo(w - m.r, Y(25)); c.stroke(); c.setLineDash([]);
+  c.fillStyle = css("--bad"); c.textAlign = "left"; c.fillText("límite 25 °C", m.l + 6, Y(25) - 6);
+  c.strokeStyle = css("--brand"); c.lineWidth = 2.2; c.beginPath(); ts.forEach((tt, i) => i ? c.lineTo(X(tt), Y(Ts[i])) : c.moveTo(X(tt), Y(Ts[i]))); c.stroke();
+  const [ax, ay] = rr(t); c.fillStyle = css("--accent"); c.beginPath(); c.arc(X(t), Y(Tf(ax, ay)), 5, 0, 2 * Math.PI); c.fill();
+  $("p-max").textContent = fmt(mx, 1) + " °C"; $("p-over").textContent = fmt(over, 2) + " s"; $("p-tmax").textContent = "t ≈ " + fmt(tmx, 2) + " s";
+}
+
+/* ---------- 3D ---------- */
+function load3d() {
+  if (plotLoaded) { draw3d(); return; }
+  const s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.27.0/plotly.min.js";
+  s.onload = () => { plotLoaded = true; draw3d(); };
+  s.onerror = () => { $("msg3d").textContent = "No se pudo cargar la vista 3D. Revisa tu conexión y vuelve a abrir esta pestaña; el resto de la consola funciona sin ella."; };
+  document.head.appendChild(s);
+}
+function draw3d() {
+  if (!P || $("v-3d").hidden) return;
+  const xs = [], ys = [], zs = [];
+  for (let x = W0.xmin; x <= W0.xmax; x += 0.8) xs.push(+x.toFixed(2));
+  for (let y = W0.ymin; y <= W0.ymax; y += 0.8) ys.push(+y.toFixed(2));
+  for (const y of ys) zs.push(xs.map(x => Tf(x, y)));
+  const rt = [...Array(301)].map((_, i) => 4 * Math.PI * i / 300), rx = rt.map(tt => rr(tt)[0]), ry = rt.map(tt => rr(tt)[1]);
+  const ink = css("--ink"), muted = css("--muted");
+  Plotly.react("plot3d", [
+    {type:"surface", x:xs, y:ys, z:zs, colorscale:[[0,"#2d5aa0"],[.25,"#9cc3e6"],[.5,"#f5efc2"],[.75,"#f2a24f"],[1,"#c0392b"]], cmin:TMIN, cmax:TMAX, opacity:.95,
+     colorbar:{title:{text:"°C"}, tickfont:{color:muted}, len:.7}, hovertemplate:"x=%{x:.1f} m<br>y=%{y:.1f} m<br>T=%{z:.1f} °C<extra></extra>"},
+    {type:"scatter3d", mode:"lines", x:rx, y:ry, z:rx.map((x, i) => Tf(x, ry[i]) + .3), line:{color:"#111111", width:6}, name:"Ruta", hoverinfo:"skip"}
+  ], {paper_bgcolor:"rgba(0,0,0,0)", margin:{l:0, r:0, t:0, b:0}, showlegend:false, font:{family:"IBM Plex Sans, sans-serif", color:ink},
+      scene:{xaxis:{title:"x (m)", color:muted}, yaxis:{title:"y (m)", color:muted}, zaxis:{title:"T (°C)", color:muted, range:[20, Math.max(30, 20 + P.A + 2)]},
+             aspectmode:"manual", aspectratio:{x:1.6, y:1.05, z:.55}, camera:{eye:{x:-1.2, y:-1.6, z:.9}}}},
+    {responsive:true, displaylogo:false, modeBarButtonsToRemove:["toImage"]});
+}
+
+/* ---------- UI ---------- */
+function drawAll() { drawPlan(); drawPerfil(); }
+$("f-code").addEventListener("submit", e => { e.preventDefault(); loadTeam($("code").value); });
+$("tslider").addEventListener("input", e => { t = +e.target.value; drawAll(); });
+$("tpi").addEventListener("click", () => { t = Math.PI; $("tslider").value = t; drawAll(); });
+let last = 0;
+function step(ts) { if (!playing) return; if (last) { t += (ts - last) / 1000 * 1.2; if (t > 4 * Math.PI) t = 0; $("tslider").value = t; drawAll(); } last = ts; requestAnimationFrame(step); }
+$("play").addEventListener("click", () => { playing = !playing; last = 0; $("play").textContent = playing ? "❚❚ Pausa" : "▶ Recorrer"; if (playing) requestAnimationFrame(step); });
+["L-heat","L-route","L-zone","L-field","L-store","L-vec"].forEach(id => $(id).addEventListener("change", drawPlan));
+const tabs = [["t-plan","v-plan"],["t-3d","v-3d"],["t-perfil","v-perfil"],["t-ver","v-ver"]];
+tabs.forEach(([tb, vw]) => $(tb).addEventListener("click", () => {
+  tabs.forEach(([a, b]) => { $(a).setAttribute("aria-selected", a === tb); $(b).hidden = a !== tb; });
+  if (vw === "v-plan") drawPlan(); if (vw === "v-perfil") drawPerfil(); if (vw === "v-3d") load3d();
+}));
+window.addEventListener("resize", () => { drawAll(); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => drawAll());
+$("code").value = "DEMO"; loadTeam("DEMO");
+</script>
+
+</body>
+</html>

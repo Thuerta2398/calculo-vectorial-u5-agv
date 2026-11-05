@@ -1,0 +1,190 @@
+\documentclass[11pt,letterpaper]{article}
+\IfFileExists{spanish.ldf}{\usepackage[spanish,es-tabla,es-nodecimaldot]{babel}}{\usepackage{babel}}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,microtype}
+\usepackage[margin=1.8cm,top=1.9cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor,colortbl,booktabs,tabularx,array,enumitem}
+\usepackage{titlesec,fancyhdr}
+\usepackage[hidelinks]{hyperref}
+\usepackage{url}
+
+\definecolor{tecnmblue}{RGB}{27,57,106}
+\definecolor{accentcolor}{RGB}{229,103,31}
+\definecolor{softblue}{RGB}{227,234,246}
+\definecolor{softorange}{RGB}{252,236,226}
+
+\titleformat{\section}{\large\bfseries\color{tecnmblue}}{\thesection.}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries\color{tecnmblue}}{\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{1.2em}{0.5em}
+\setlist{itemsep=2pt,topsep=3pt}
+\setlength{\parindent}{0pt}\setlength{\parskip}{4pt}
+\renewcommand{\arraystretch}{1.25}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\pagestyle{fancy}\fancyhf{}
+\lhead{\small\color{tecnmblue}Cálculo Vectorial Aplicado · ACF-0904}
+\rhead{\small\color{tecnmblue}Proyecto Final · Unidad 5}
+\cfoot{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\newcommand{\rol}[2]{\par\smallskip{\color{tecnmblue}\textbf{#1}}\hfill{\small\itshape #2}\par}
+\newcommand{\dest}[1]{\textcolor{accentcolor}{\textbf{#1}}}
+
+\begin{document}
+
+\begin{center}
+{\LARGE\bfseries\color{tecnmblue} Proyecto Final}\\[3pt]
+{\large Guía del Proyecto: Cálculo Vectorial Aplicado}\\[3pt]
+{\normalsize Unidad 5 · Integración múltiple, campos vectoriales y teoremas integrales}\\[8pt]
+\colorbox{softblue}{\parbox{0.92\linewidth}{\centering\small
+\textbf{Caso de estudio:} validación cinética, térmica y de ventilación de la ruta de un AGV\\
+en una planta de manufactura de componentes electrónicos}}
+\end{center}
+
+\section{Escenario}
+Una planta de ensamblaje de componentes electrónicos sensibles opera una flotilla de Vehículos Guiados Automatizados (AGV). La gerencia de ingeniería debe aprobar o rechazar una nueva ruta de transporte. La ruta pasa cerca de un \textbf{horno de curado} y atraviesa una nave con un \textbf{sistema de ventilación forzada}; al final del recorrido está el \textbf{almacén} de producto terminado.
+
+El equipo de ingeniería emitirá un \textbf{dictamen técnico} que responda tres preguntas: ¿el AGV puede volcar en la curva crítica?, ¿la carga se expone a temperaturas superiores a 25\,°C? y ¿cómo afecta el flujo de aire al vehículo y al almacén?
+
+\section{Organización del equipo}
+\begin{itemize}
+\item Equipos de \textbf{4 integrantes}. El docente asigna a cada equipo un \textbf{código} (por ejemplo, \texttt{AGV-K7P2}) que define los datos de su planta: cada equipo tiene parámetros distintos.
+\item Cada integrante es responsable del cálculo de un rol, pero \textbf{todos deben dominar los cuatro}: en el video cada quien explica un rol distinto al que calculó (sección~7).
+\item El trabajo es \dest{estrictamente en equipo}. Nadie puede decidir trabajar solo. Si el equipo se desintegra, deben notificarlo al docente \textbf{antes de la fecha límite de reorganización}; solo el docente reasigna integrantes.
+\item Equipos incompletos (3 integrantes) solo con autorización del docente, quien indicará cómo se reparte el cuarto rol.
+\end{itemize}
+
+\section{Modelo de la planta}
+Distancias en metros, tiempo en segundos, temperatura en °C y fuerza en newtons. Los valores numéricos de su equipo (\(B, A, x_0, y_0, \sigma, R, a, b, c, d, w, h\) y el almacén) aparecen en la \textbf{ficha técnica} de la Consola de Ingeniería AGV al capturar su código.
+
+\begin{tabularx}{\linewidth}{@{}l Y@{}}
+\toprule
+\textbf{Elemento} & \textbf{Modelo} \\ \midrule
+Ruta del AGV & \(\vec r(t)=\langle 4t,\; B\sin(t/2)\rangle,\quad t\in[0,4\pi]\) \\
+Temperatura & \(T(x,y)=20+A\,e^{-[(x-x_0)^2+(y-y_0)^2]/\sigma^2}\); horno en \((x_0,y_0)\), zona de exclusión: disco de radio \(R\) \\
+Ventilación & \(\vec F(x,y)=\langle P,Q\rangle=\langle -a\,y+b\,x^2,\; c\,xy+d\rangle\) \\
+Estabilidad & Aceleración lateral límite antes de volcar: \(a_{\text{lím}}=\dfrac{g\,w}{2h}\), con \(g=9.81\) m/s\(^2\), vía \(w\) y altura del centro de gravedad \(h\) \\
+Almacén & Rectángulo \([x_1,x_2]\times[y_1,y_2]\), contorno recorrido en sentido antihorario \\
+Punto crítico & \(P=\vec r(\pi)=(4\pi,\,B)\) \\ \bottomrule
+\end{tabularx}
+
+\section{Tareas por rol}
+\rol{Integrante 1 · Ingeniero de Logística}{5.8 Integral de línea}
+Calcular a mano el \textbf{trabajo} que realiza el campo de ventilación sobre el AGV en el primer tramo, \(t\in[0,2\pi]\):
+\[ W=\int_C \vec F\cdot d\vec r=\int_0^{2\pi}\Big[P\big(x(t),y(t)\big)\,x'(t)+Q\big(x(t),y(t)\big)\,y'(t)\Big]dt . \]
+Mostrar la parametrización, cada término de la integral y la integración por partes donde aparezca. Interpretar el signo de \(W\).
+
+\rol{Integrante 2 · Ingeniero de Dinámica}{5.7 y 5.9 Campos vectoriales, divergencia y rotacional}
+\begin{enumerate}[label=\alph*)]
+\item Obtener \(\operatorname{div}\vec F=\partial P/\partial x+\partial Q/\partial y\) y \((\operatorname{rot}\vec F)\cdot\hat k=\partial Q/\partial x-\partial P/\partial y\); evaluarlos en \(P=(4\pi,B)\).
+\item Interpretar: ¿en ese punto el aire se comporta como fuente o como sumidero?, ¿en qué sentido tiende a girar?
+\item Calcular la aceleración normal en \(t=\pi\), \(a_N=\dfrac{|x'y''-y'x''|}{\|\vec r\,'(t)\|}\), y compararla con \(a_{\text{lím}}\).
+\end{enumerate}
+
+\rol{Integrante 3 · Ingeniero Térmico}{5.4 Integral doble en coordenadas polares}
+\begin{enumerate}[label=\alph*)]
+\item Plantear en polares, centradas en el horno, el exceso térmico de la zona de exclusión y resolverlo a mano:
+\(\displaystyle \iint_D (T-20)\,dA=\int_0^{2\pi}\!\!\int_0^{R} A\,e^{-r^2/\sigma^2}\,r\,dr\,d\theta .\)
+\item Calcular la temperatura promedio de la zona: \(\bar T=20+\dfrac{1}{\pi R^2}\iint_D (T-20)\,dA\), y compararla con 25\,°C.
+\item Con el \emph{Perfil térmico} de la consola, reportar la temperatura máxima de la carga y el tiempo que pasa arriba de 25\,°C.
+\end{enumerate}
+
+\rol{Integrante 4 · Gerente de Calidad}{5.10 Teorema de Green}
+Calcular la circulación del aire en el contorno del almacén por \textbf{dos caminos} y demostrar que coinciden:
+\begin{enumerate}[label=\alph*)]
+\item Directamente, como integral de línea sobre los cuatro lados del rectángulo (sentido antihorario).
+\item Con el teorema de Green: \(\displaystyle\oint_C \vec F\cdot d\vec r=\iint_R\Big(\frac{\partial Q}{\partial x}-\frac{\partial P}{\partial y}\Big)dA\). Usar el rotacional del Integrante 2.
+\end{enumerate}
+Interpretar qué significa una circulación distinta de cero para el polvo y los componentes almacenados.
+
+\section{Consola de Ingeniería AGV}
+Herramienta en línea que funciona en computadora o celular, sin instalar nada:
+\begin{center}\small\url{https://thuerta2398.github.io/calculo-vectorial-u5-agv/}\end{center}
+\begin{enumerate}
+\item Capturen su código de equipo y pulsen \emph{Cargar planta}. Se muestran su ficha técnica y su plano.
+\item \textbf{Planta 2D}: activen las capas (temperatura, ruta, zona de exclusión, campo \(\vec F\), almacén, vectores \(\hat T\) y \(\hat N\)) y muevan el deslizador de \(t\).
+\item \textbf{Superficie 3D} y \textbf{Perfil térmico}: visualicen \(T(x,y)\) y la temperatura de la carga durante el recorrido.
+\item \textbf{Verificador}: capturen sus 7 resultados. La consola solo responde \emph{Correcto} o \emph{Revisa}; tras varios intentos ofrece pistas. Formato: punto decimal, sin unidades, al menos 2 decimales (\texttt{-12.57}, no \texttt{12,57} ni \texttt{12.57 J}).
+\item Con los 7 resultados correctos aparece el \textbf{folio de verificación}, que va en la portada del reporte.
+\end{enumerate}
+La consola comprueba resultados, pero \textbf{no sustituye el procedimiento}: el reporte debe mostrar el desarrollo completo a mano o en editor de ecuaciones.
+
+\section{Dictamen de ingeniería}
+Redactado en conjunto, con los datos de los cuatro roles:
+\begin{enumerate}
+\item \textbf{Seguridad cinética.} Comparando \(a_N(\pi)\) con \(a_{\text{lím}}\), ¿el AGV vuelca en la curva crítica? Si es así, ¿qué modificación de la ruta o del vehículo proponen?
+\item \textbf{Riesgo térmico.} ¿La temperatura promedio de la zona de exclusión supera 25\,°C? Según el perfil térmico, ¿cuánto tiempo pasa la carga arriba de ese límite? ¿Se aprueba la ruta?
+\item \textbf{Ventilación.} ¿El flujo de aire ayuda o frena al AGV en el primer tramo (signo de \(W\))? ¿Qué indican la divergencia y el rotacional en \(P\) y la circulación en el almacén?
+\end{enumerate}
+El dictamen cierra con una decisión explícita: \textbf{ruta aprobada}, \textbf{aprobada con condiciones} o \textbf{rechazada}.
+
+\section{Entrega}
+\textbf{Un solo archivo PDF}, el mismo para todo el equipo, que \textbf{cada integrante sube} a la plataforma.
+\begin{itemize}
+\item \textbf{Portada:} código de equipo, folio de verificación, nombre de cada integrante con su rol y el \textbf{enlace al video}.
+\item \textbf{Reporte técnico:} máximo \textbf{4 cuartillas} sin contar la portada: desarrollo por rol, figuras rotuladas (capturas de la consola) con unidades, y dictamen.
+\item \textbf{Video:} de 4:30 a 5:30 minutos, subido a Google Drive con permiso \emph{``Cualquier persona con el enlace puede ver''}. Antes de entregar, prueben el enlace en una ventana de incógnito.
+\end{itemize}
+
+\subsection*{Requisitos del video}
+\begin{itemize}
+\item \dest{Los cuatro integrantes aparecen a cuadro y hablan.} No es opcional.
+\item \textbf{Rotación de roles:} cada integrante explica el resultado de un rol distinto al que calculó:
+\begin{center}\small
+\begin{tabular}{@{}ll@{}}\toprule
+Quien calculó\ldots & explica en el video\ldots \\ \midrule
+Logística & Dinámica \\ Dinámica & Térmico \\ Térmico & Calidad \\ Calidad & Logística \\ \bottomrule
+\end{tabular}\end{center}
+\item Explicar con sus palabras, no leer: pueden apoyarse en la consola o en notas breves, pero no en un guion leído.
+\item Mostrar al menos una vez la consola en pantalla y cerrar con el dictamen del equipo.
+\end{itemize}
+
+\section{Evaluación}
+\subsection*{Requisitos de admisión (se revisan antes de calificar)}
+\begin{enumerate}
+\item Un solo PDF con código de equipo, folio y nombres de los cuatro integrantes en la portada.
+\item El enlace al video abre con permiso público de lectura. \textbf{Si no abre, el video vale 0.}
+\item Los cuatro integrantes aparecen a cuadro. \textbf{Quien no aparezca tiene 0 en el video.}
+\end{enumerate}
+
+\subsection*{Rúbrica del video (50 puntos)}
+{\small
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{3.2cm} Y Y Y@{}}
+\toprule
+\textbf{Criterio} & \textbf{Excelente} & \textbf{Suficiente} & \textbf{Insuficiente} \\ \midrule
+Dominio sin lectura (20) & Explican con sus palabras, justifican el porqué y no solo el qué, miran a cámara (20) & Se apoyan en notas, pero explican (12) & Leen un guion o la pantalla (0--5) \\
+Interpretación física y dictamen (15) & Conectan cada resultado con la decisión de ingeniería (15) & Dan resultados con interpretación parcial (8) & Solo recitan números (0--3) \\
+Participación equitativa (10) & Los cuatro explican tiempos similares (10) & Desequilibrio claro (5) & Uno o dos acaparan el video (0) \\
+Demostración con la consola (5) & Muestran en pantalla la verificación o la visualización (5) & La mencionan sin mostrarla (2) & No la usan (0) \\ \bottomrule
+\end{tabularx}}
+
+\subsection*{Rúbrica del reporte técnico (50 puntos)}
+{\small
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{4.6cm} c Y@{}}
+\toprule
+\textbf{Criterio} & \textbf{Puntos} & \textbf{Qué se revisa} \\ \midrule
+Desarrollo analítico por rol & 24 (4\,\(\times\)\,6) & Planteamiento, procedimiento completo y resultado correcto con los datos del equipo \\
+Folio de verificación & 6 & El folio corresponde al código del equipo \\
+Dictamen de ingeniería integrado & 15 & Responde las 3 preguntas con datos de los 4 roles y emite una decisión explícita \\
+Formato técnico & 5 & Figuras rotuladas, unidades, máximo 4 cuartillas \\ \bottomrule
+\end{tabularx}}
+
+\subsection*{Calificación y modificadores individuales}
+\begin{itemize}
+\item Calificación del proyecto = video (50) + reporte (50). La nota del equipo se asigna a cada integrante y después se aplican los modificadores.
+\item \dest{Trabajo individual por decisión propia: calificación máxima de 30/100.}
+\item Integrante que no aparece a cuadro: 0 en el video; conserva la nota del reporte.
+\item Video con duración fuera de 4:30--5:30: se descuenta el 20\,\% del rubro de video.
+\item Reporte o video que no corresponden al código del equipo: se anula esa evidencia.
+\end{itemize}
+
+\section*{Referencias}
+\begin{list}{}{\leftmargin=1.5em\itemindent=-1.5em\itemsep=3pt}
+\item Hass, J. R., Heil, C. E., \& Weir, M. D. (2018). \textit{Thomas' calculus} (14th ed.). Pearson.
+\item Marsden, J. E., \& Tromba, A. J. (2012). \textit{Vector calculus} (6th ed.). W. H. Freeman.
+\item Stewart, J., Clegg, D., \& Watson, S. (2021). \textit{Calculus: Early transcendentals} (9th ed.). Cengage Learning.
+\end{list}
+
+\end{document}

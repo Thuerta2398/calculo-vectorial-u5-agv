@@ -1,0 +1,5 @@
+Claves_*
+*.aux
+*.log
+*.out
+.DS_Store
